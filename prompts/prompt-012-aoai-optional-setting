@@ -1,4 +1,4 @@
-add a setting in the deploy.sh file which will be include-chat-ui and it is defaulted to false which means the genAI IaC will NOT be deployed 
+[NOT USED] add a setting in the deploy.sh file which will be include-chat-ui and it is defaulted to false which means the genAI IaC will NOT be deployed 
 even though the chat UI files will remain active but not work.
 if this is set to TRUE then the IaC for GenAI will be deployed.
 update the docs to make it clear how to deploy with and without the chat ui, but make sure the default instruction is simple.
