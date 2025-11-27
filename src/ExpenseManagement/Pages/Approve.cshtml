@@ -1,0 +1,90 @@
+@page
+@model ApproveModel
+@{
+    ViewData["Title"] = "Approve Expenses";
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="error-banner">
+        <h6>⚠️ Database Connection Error</h6>
+        <p class="mb-2">@Model.ErrorMessage</p>
+        <details>
+            <summary>Technical Details</summary>
+            <pre>@Model.ErrorDetails</pre>
+        </details>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="alert alert-success">
+        @Model.SuccessMessage
+    </div>
+}
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Approve Expenses</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3">Pending expenses awaiting approval:</p>
+        
+        <form method="get" class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label for="filter" class="form-label">Filter:</label>
+                <input type="text" class="form-control" id="filter" name="filter" value="@Model.Filter" placeholder="Search...">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Apply</button>
+            </div>
+        </form>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Category</th>
+                        <th>Description</th>
+                        <th class="text-end">Amount</th>
+                        <th>User</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.PendingExpenses.Any())
+                    {
+                        @foreach (var expense in Model.PendingExpenses)
+                        {
+                            <tr>
+                                <td>@expense.ExpenseDate.ToString("dd/MM/yyyy")</td>
+                                <td>@expense.CategoryName</td>
+                                <td>@expense.Description</td>
+                                <td class="text-end amount-cell">@expense.FormattedAmount</td>
+                                <td>@expense.UserName</td>
+                                <td>
+                                    <form method="post" style="display:inline">
+                                        <input type="hidden" name="expenseId" value="@expense.ExpenseId" />
+                                        <button type="submit" asp-page-handler="Approve" class="btn btn-sm btn-success me-1">
+                                            Approve
+                                        </button>
+                                        <button type="submit" asp-page-handler="Reject" class="btn btn-sm btn-outline-danger">
+                                            Reject
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No pending expenses to approve</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,56 @@
+# .gitignore
+
+# Build outputs
+bin/
+obj/
+publish/
+out/
+
+# IDE files
+.vs/
+.vscode/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# NuGet packages
+packages/
+*.nupkg
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+
+# Environment files (may contain secrets)
+.env
+.env.local
+*.local.json
+appsettings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+.venv/
+
+# Node (if used)
+node_modules/
+
+# Keep zip files for deployment
+# !app.zip
+
+# Azure deployment artifacts
+*.pubxml
+*.publishproj

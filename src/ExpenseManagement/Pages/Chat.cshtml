@@ -1,0 +1,282 @@
+@page
+@model ChatModel
+@{
+    ViewData["Title"] = "Chat";
+}
+
+<style>
+    .chat-container {
+        height: calc(100vh - 300px);
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+    }
+    
+    .message {
+        max-width: 80%;
+        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        border-radius: 1rem;
+    }
+    
+    .message-user {
+        background: linear-gradient(135deg, #2c5282 0%, #3182ce 100%);
+        color: white;
+        margin-left: auto;
+        border-bottom-right-radius: 0.25rem;
+    }
+    
+    .message-assistant {
+        background-color: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-right: auto;
+        border-bottom-left-radius: 0.25rem;
+    }
+    
+    .message-assistant strong {
+        color: #2c5282;
+    }
+    
+    .message-assistant ul, .message-assistant ol {
+        margin-bottom: 0.5rem;
+        padding-left: 1.5rem;
+    }
+    
+    .message-assistant li {
+        margin-bottom: 0.25rem;
+    }
+    
+    .chat-input-container {
+        padding: 1rem 0;
+    }
+    
+    .chat-status {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .status-configured {
+        background-color: #c6f6d5;
+        color: #276749;
+    }
+    
+    .status-not-configured {
+        background-color: #fed7d7;
+        color: #c53030;
+    }
+    
+    .typing-indicator {
+        display: none;
+        padding: 0.5rem 1rem;
+        background-color: white;
+        border-radius: 1rem;
+        width: fit-content;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .typing-indicator.show {
+        display: block;
+    }
+    
+    .typing-indicator span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background-color: #a0aec0;
+        border-radius: 50%;
+        margin-right: 4px;
+        animation: bounce 1.4s infinite ease-in-out both;
+    }
+    
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+    
+    @@keyframes bounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
+    }
+</style>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Chat with AI Assistant</h5>
+        <span id="chatStatus" class="chat-status"></span>
+    </div>
+    <div class="card-body chat-container">
+        <div id="chatMessages" class="chat-messages">
+            <div class="message message-assistant">
+                <strong>Welcome!</strong><br>
+                I'm your Expense Management assistant. I can help you:
+                <ul>
+                    <li>View and search your expenses</li>
+                    <li>Understand expense statuses</li>
+                    <li>Answer questions about the approval process</li>
+                </ul>
+                Try asking: "Show me my expenses" or "What expenses are pending?"
+            </div>
+            <div id="typingIndicator" class="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        <div class="chat-input-container">
+            <form id="chatForm" class="d-flex gap-2">
+                <input type="text" id="userMessage" class="form-control" 
+                       placeholder="Type your message..." autocomplete="off">
+                <button type="submit" class="btn btn-primary px-4">Send</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const userMessageInput = document.getElementById('userMessage');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const chatStatus = document.getElementById('chatStatus');
+    
+    let chatHistory = [];
+
+    // Check chat status on load
+    async function checkStatus() {
+        try {
+            const response = await fetch('/api/chat/status');
+            const data = await response.json();
+            
+            if (data.isConfigured) {
+                chatStatus.textContent = '✓ AI Connected';
+                chatStatus.className = 'chat-status status-configured';
+            } else {
+                chatStatus.textContent = '○ Demo Mode';
+                chatStatus.className = 'chat-status status-not-configured';
+            }
+        } catch (error) {
+            chatStatus.textContent = '○ Demo Mode';
+            chatStatus.className = 'chat-status status-not-configured';
+        }
+    }
+    
+    checkStatus();
+
+    chatForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const message = userMessageInput.value.trim();
+        if (!message) return;
+        
+        // Add user message
+        addMessage(message, 'user');
+        chatHistory.push({ role: 'user', content: message });
+        userMessageInput.value = '';
+        
+        // Show typing indicator
+        typingIndicator.classList.add('show');
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    message: message,
+                    history: chatHistory.slice(-10) // Last 10 messages for context
+                })
+            });
+            
+            const data = await response.json();
+            
+            typingIndicator.classList.remove('show');
+            
+            if (data.success) {
+                addMessage(data.message, 'assistant');
+                chatHistory.push({ role: 'assistant', content: data.message });
+            } else {
+                addMessage('Sorry, I encountered an error. Please try again.', 'assistant');
+            }
+        } catch (error) {
+            typingIndicator.classList.remove('show');
+            addMessage('Sorry, I was unable to process your request. Please try again.', 'assistant');
+        }
+    });
+
+    function addMessage(text, role) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message message-${role}`;
+        
+        // Format the message with proper HTML handling
+        const formattedText = formatMessage(text);
+        messageDiv.innerHTML = formattedText;
+        
+        // Insert before typing indicator
+        chatMessages.insertBefore(messageDiv, typingIndicator);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function formatMessage(text) {
+        // First escape HTML to prevent XSS
+        let escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        
+        // Then apply markdown-style formatting
+        // Bold: **text** -> <strong>text</strong>
+        escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        
+        // Process lists
+        const lines = escaped.split('\n');
+        let result = [];
+        let inList = false;
+        let listType = null;
+        
+        for (let line of lines) {
+            const numberedMatch = line.match(/^\d+\.\s+(.+)$/);
+            const bulletMatch = line.match(/^[-*]\s+(.+)$/);
+            
+            if (numberedMatch) {
+                if (!inList || listType !== 'ol') {
+                    if (inList) result.push(listType === 'ol' ? '</ol>' : '</ul>');
+                    result.push('<ol>');
+                    inList = true;
+                    listType = 'ol';
+                }
+                result.push(`<li>${numberedMatch[1]}</li>`);
+            } else if (bulletMatch) {
+                if (!inList || listType !== 'ul') {
+                    if (inList) result.push(listType === 'ol' ? '</ol>' : '</ul>');
+                    result.push('<ul>');
+                    inList = true;
+                    listType = 'ul';
+                }
+                result.push(`<li>${bulletMatch[1]}</li>`);
+            } else {
+                if (inList) {
+                    result.push(listType === 'ol' ? '</ol>' : '</ul>');
+                    inList = false;
+                    listType = null;
+                }
+                result.push(line);
+            }
+        }
+        
+        if (inList) {
+            result.push(listType === 'ol' ? '</ol>' : '</ul>');
+        }
+        
+        // Join and convert remaining newlines to <br>
+        return result.join('\n').replace(/\n/g, '<br>');
+    }
+</script>
+}
